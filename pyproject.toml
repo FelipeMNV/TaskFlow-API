@@ -8,7 +8,10 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.12, <4.0"
 dependencies = [
-    "fastapi (>=0.141.1,<0.142.0)"
+    "fastapi (>=0.141.1,<0.142.0)",
+    "sqlalchemy (>=2.1.2,<3.0.0)",
+    "pydantic-settings (>=2.15.0,<3.0.0)",
+    "alembic (>=1.20.0,<2.0.0)"
 ]
 
 [tool.poetry]
@@ -20,7 +23,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 line-length = 79
-extend-exclude = ['migrations']
+extend-exclude = ['migration']
 
 [tool.ruff.lint]
 preview = true
