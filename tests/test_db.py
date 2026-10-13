@@ -1,5 +1,6 @@
 from sqlalchemy import select
 
+from fast_zero.database import get_session
 from fast_zero.models import User
 
 
@@ -33,3 +34,8 @@ def test_create_user(session, mock_db_time):
         'created_at': time,
         'updated_at': time,
     }
+
+
+def test_get_session():
+    for session in get_session():
+        assert session is not None
