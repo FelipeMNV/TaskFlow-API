@@ -1,5 +1,7 @@
 from http import HTTPStatus
 
+import pytest
+
 from fast_zero.models import User
 from fast_zero.security import get_password_hash
 
@@ -22,15 +24,16 @@ def test_token_wrong_password(client, user):
     assert response.json() == {'detail': 'Incorrect email or password'}
 
 
-def test_update_user_wrong_user(client, user, token, session):
+@pytest.mark.asyncio
+async def test_update_user_wrong_user(client, user, token, session):
     other_user = User(
         username='outro',
         email='outro@example.com',
         password=get_password_hash('password'),
     )
     session.add(other_user)
-    session.commit()
-    session.refresh(other_user)
+    await session.commit()
+    await session.refresh(other_user)
 
     response = client.put(
         f'/users/{other_user.id}',

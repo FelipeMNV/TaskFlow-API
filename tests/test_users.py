@@ -1,5 +1,7 @@
 from http import HTTPStatus
 
+import pytest
+
 from fast_zero.models import User
 from fast_zero.schemas import UserPublic
 from fast_zero.security import get_password_hash
@@ -87,7 +89,8 @@ def test_update_user(client, user, token):
     }
 
 
-def test_get_user(client, user):
+@pytest.mark.asyncio
+async def test_get_user(client, user):
     response = client.get('/users/1')
 
     assert response.status_code == HTTPStatus.OK
@@ -107,7 +110,8 @@ def test_get_user_not_found(client, token):
     assert response.json() == {'detail': 'User not found'}
 
 
-def test_delete_user(client, user, token):
+@pytest.mark.asyncio
+async def test_delete_user(client, user, token):
     response = client.delete(
         f'/users/{user.id}',
         headers={'Authorization': f'Bearer {token}'},
@@ -117,15 +121,16 @@ def test_delete_user(client, user, token):
     assert response.json() == {'message': 'User deleted'}
 
 
-def test_delete_user_wrong_user(client, user, token, session):
+@pytest.mark.asyncio
+async def test_delete_user_wrong_user(client, user, token, session):
     other_user = User(
         username='outrodel',
         email='outrodel@example.com',
         password='password',
     )
     session.add(other_user)
-    session.commit()
-    session.refresh(other_user)
+    await session.commit()
+    await session.refresh(other_user)
 
     response = client.delete(
         f'/users/{other_user.id}',
@@ -135,14 +140,15 @@ def test_delete_user_wrong_user(client, user, token, session):
     assert response.json() == {'detail': 'Not enough permission'}
 
 
-def test_update_integrity_error(client, user, token, session):
+@pytest.mark.asyncio
+async def test_update_integrity_error(client, user, token, session):
     other_user = User(
         username='outro',
         email='outro@example.com',
         password=get_password_hash('password'),
     )
     session.add(other_user)
-    session.commit()
+    await session.commit()
 
     response = client.put(
         f'/users/{user.id}',

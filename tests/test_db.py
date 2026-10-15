@@ -1,10 +1,15 @@
+import pytest
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+)
 
 from fast_zero.database import get_session
 from fast_zero.models import User
 
 
-def test_create_user(session, mock_db_time):
+@pytest.mark.asyncio
+async def test_create_user(session: 'AsyncSession', mock_db_time):
 
     with mock_db_time(model=User) as time:
         new_user = User(
@@ -13,9 +18,9 @@ def test_create_user(session, mock_db_time):
             password='secret',
         )
         session.add(new_user)
-        session.commit()
+        await session.commit()
 
-    user = session.scalar(select(User).where(User.username == 'teste'))
+    user = await session.scalar(select(User).where(User.username == 'teste'))
 
     user_dict = {
         'id': user.id,
@@ -36,6 +41,7 @@ def test_create_user(session, mock_db_time):
     }
 
 
-def test_get_session():
-    for session in get_session():
-        assert session is not None
+@pytest.mark.asyncio
+async def test_get_session():
+    async for session in get_session():
+        assert isinstance(session, AsyncSession)
