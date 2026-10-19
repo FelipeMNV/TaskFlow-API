@@ -2,17 +2,7 @@ from http import HTTPStatus
 
 import pytest
 
-from fast_zero.models import User
 from fast_zero.schemas import UserPublic
-from fast_zero.security import get_password_hash
-
-
-def test_read_root_deve_retornar_OK_e_ola_mundo(client):
-
-    response = client.get('/')  # Action
-
-    assert response.status_code == HTTPStatus.OK  # Assert
-    assert response.json() == {'message': 'Olá Mundo!'}  # Assert
 
 
 def test_create_user(client):
@@ -121,44 +111,42 @@ async def test_delete_user(client, user, token):
     assert response.json() == {'message': 'User deleted'}
 
 
-@pytest.mark.asyncio
-async def test_delete_user_wrong_user(client, user, token, session):
-    other_user = User(
-        username='outrodel',
-        email='outrodel@example.com',
-        password='password',
-    )
-    session.add(other_user)
-    await session.commit()
-    await session.refresh(other_user)
-
+def test_delete_user_wrong_user(client, other_user, token):
     response = client.delete(
         f'/users/{other_user.id}',
         headers={'Authorization': f'Bearer {token}'},
     )
+
     assert response.status_code == HTTPStatus.FORBIDDEN
     assert response.json() == {'detail': 'Not enough permission'}
 
 
 @pytest.mark.asyncio
-async def test_update_integrity_error(client, user, token, session):
-    other_user = User(
-        username='outro',
-        email='outro@example.com',
-        password=get_password_hash('password'),
-    )
-    session.add(other_user)
-    await session.commit()
-
+async def test_update_integrity_error(client, other_user, token, user):
     response = client.put(
         f'/users/{user.id}',
         headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'fausto',
-            'email': 'outro@example.com',
+            'email': other_user.email,
             'password': 'mynewpassword',
         },
     )
 
     assert response.status_code == HTTPStatus.CONFLICT
     assert response.json() == {'detail': 'Username or Email already exists'}
+
+
+def test_update_user_with_wrong_user(client, other_user, token):
+    response = client.put(
+        f'/users/{other_user.id}',
+        headers={'Authorization': f'Bearer {token}'},
+        json={
+            'username': 'bob',
+            'email': 'bob@example.com',
+            'password': 'mynewpassword',
+        },
+    )
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert response.json() == {'detail': 'Not enough permissions'}

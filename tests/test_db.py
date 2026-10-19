@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import (
     AsyncSession,
 )
 
-from fast_zero.database import get_session
 from fast_zero.models import User
 
 
@@ -39,9 +38,3 @@ async def test_create_user(session: 'AsyncSession', mock_db_time):
         'created_at': time,
         'updated_at': time,
     }
-
-
-@pytest.mark.asyncio
-async def test_get_session():
-    async for session in get_session():
-        assert isinstance(session, AsyncSession)

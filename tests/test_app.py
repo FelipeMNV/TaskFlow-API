@@ -1,7 +1,10 @@
 from http import HTTPStatus
 
+import pytest
 
-def test_read_root_deve_retornar_OK_e_ola_mundo(client):
+
+@pytest.mark.asyncio
+async def test_read_root_deve_retornar_OK_e_ola_mundo(client):
 
     response = client.get('/')  # Action
 

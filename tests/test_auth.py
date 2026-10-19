@@ -1,12 +1,9 @@
 from http import HTTPStatus
 
-import pytest
-
-from fast_zero.models import User
-from fast_zero.security import get_password_hash
+from freezegun import freeze_time
 
 
-def test_token_wrong_email(client):
+def test_token_wrong_user(client):
     response = client.post(
         '/auth/token',
         data={'username': 'nao_existo@example.com', 'password': 'password123'},
@@ -24,30 +21,6 @@ def test_token_wrong_password(client, user):
     assert response.json() == {'detail': 'Incorrect email or password'}
 
 
-@pytest.mark.asyncio
-async def test_update_user_wrong_user(client, user, token, session):
-    other_user = User(
-        username='outro',
-        email='outro@example.com',
-        password=get_password_hash('password'),
-    )
-    session.add(other_user)
-    await session.commit()
-    await session.refresh(other_user)
-
-    response = client.put(
-        f'/users/{other_user.id}',
-        headers={'Authorization': f'Bearer {token}'},
-        json={
-            'username': 'novo_nome',
-            'email': 'novo@example.com',
-            'password': 'password',
-        },
-    )
-    assert response.status_code == HTTPStatus.FORBIDDEN
-    assert response.json() == {'detail': 'Not enough permissions'}
-
-
 def test_get_token(client, user):
     response = client.post(
         '/auth/token',
@@ -58,3 +31,60 @@ def test_get_token(client, user):
     assert response.status_code == HTTPStatus.OK
     assert token['token_type'] == 'Bearer'
     assert 'access_token' in token
+
+
+def test_token_expired_after_time(client, user):
+    with freeze_time('2026-10-31 12:00:00'):
+        response = client.post(
+            '/auth/token',
+            data={'username': user.email, 'password': user.clean_password},
+        )
+        assert response.status_code == HTTPStatus.OK
+        token = response.json()['access_token']
+
+    with freeze_time('2026-10-31 12:31:00'):
+        response = client.put(
+            f'/users/{user.id}',
+            headers={'Authorization': f'Bearer {token}'},
+            json={
+                'username': 'wrongwrong',
+                'email': 'wrong@wrong.com',
+                'password': 'wrong',
+            },
+        )
+        assert response.status_code == HTTPStatus.UNAUTHORIZED
+        assert response.json() == {'detail': 'Could not validate credentials'}
+
+
+def test_refresh_token(client, token):
+    response = client.post(
+        '/auth/refresh_token',
+        headers={'Authorization': f'Bearer {token}'},
+    )
+
+    data = response.json()
+
+    assert response.status_code == HTTPStatus.OK
+    assert 'access_token' in data
+    assert 'token_type' in data
+    assert data['token_type'] == 'Bearer'
+
+
+def test_token_expired_dont_refresh(client, user):
+    with freeze_time('2026-10-23 12:00:00'):
+        response = client.post(
+            '/auth/token',
+            data={'username': user.email, 'password': user.clean_password},
+        )
+        assert response.status_code == HTTPStatus.OK
+        token = response.json()['access_token']
+
+        with freeze_time('2026-10-23 12:31:00'):
+            response = client.post(
+                '/auth/refresh_token',
+                headers={'Authorization': f'Bearer {token}'},
+            )
+            assert response.status_code == HTTPStatus.UNAUTHORIZED
+            assert response.json() == {
+                'detail': 'Could not validate credentials'
+            }
