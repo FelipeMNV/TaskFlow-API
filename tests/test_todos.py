@@ -1,3 +1,4 @@
+from datetime import datetime
 from http import HTTPStatus
 
 import factory
@@ -17,22 +18,27 @@ class TodoFactory(factory.Factory):
     user_id = 1
 
 
-def test_create_todo(client, token):
-    response = client.post(
-        '/todos',
-        headers={'Authorization': f'Bearer {token}'},
-        json={
-            'title': 'Test todo',
-            'description': 'Test Description',
-            'state': 'draft',
-        },
-    )
+def test_create_todo(client, token, mock_db_time):
+    with mock_db_time(model=Todo) as time:
+        response = client.post(
+            '/todos/',
+            headers={'Authorization': f'Bearer {token}'},
+            json={
+                'title': 'Test todo',
+                'description': 'Test Description',
+                'state': 'draft',
+            },
+        )
+
+    assert response.status_code == HTTPStatus.OK
 
     assert response.json() == {
         'id': 1,
         'title': 'Test todo',
         'description': 'Test Description',
         'state': 'draft',
+        'created_at': time.isoformat(),
+        'updated_at': time.isoformat(),
     }
 
 
@@ -194,3 +200,69 @@ async def test_patch_todo(session, client, user, token):
 
     assert response.status_code == HTTPStatus.OK
     assert response.json()['title'] == 'teste!'
+
+
+@pytest.mark.asyncio
+async def test_list_todos_complete_response(session, client, token, user):
+    todo = TodoFactory(user_id=user.id)
+
+    session.add(todo)
+    await session.commit()
+    await session.refresh(todo)
+
+    response = client.get(
+        '/todos/', headers={'Authorization': f'Bearer {token}'}
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() == {
+        'todos': [
+            {
+                'id': todo.id,
+                'title': todo.title,
+                'description': todo.description,
+                'state': todo.state.value,
+                'created_at': todo.created_at.isoformat(),
+                'updated_at': todo.updated_at.isoformat(),
+            }
+        ]
+    }
+
+
+@pytest.mark.asyncio
+async def test_update_todo_timestamp(
+    session, client, user, token, mock_db_time
+):
+    with mock_db_time(model=Todo) as creation_time:
+        todo = TodoFactory(user_id=user.id)
+        session.add(todo)
+        await session.commit()
+        await session.refresh(todo)
+
+    response = client.patch(
+        f'/todos/{todo.id}',
+        json={'title': 'Titulo atualizado'},
+        headers={'Authorization': f'Bearer {token}'},
+    )
+
+    assert response.status_code == HTTPStatus.OK
+
+    data = response.json()
+
+    created_at = datetime.fromisoformat(data['created_at'])
+    updated_at = datetime.fromisoformat(data['updated_at'])
+
+    assert data['title'] == 'Titulo atualizado'
+    assert created_at == creation_time
+    assert updated_at > created_at
+
+
+@pytest.mark.asyncio
+async def test_todo_invalid_state(session, user):
+    todo = TodoFactory(user_id=user.id, state='invalid_state')
+
+    session.add(todo)
+    await session.commit()
+
+    with pytest.raises(LookupError):
+        await session.refresh(todo)
