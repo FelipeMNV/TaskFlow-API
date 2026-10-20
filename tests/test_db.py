@@ -28,6 +28,7 @@ async def test_create_user(session: 'AsyncSession', mock_db_time):
         'password': user.password,
         'created_at': user.created_at,
         'updated_at': user.updated_at,
+        'todos': [],
     }
 
     assert user_dict == {
@@ -37,4 +38,5 @@ async def test_create_user(session: 'AsyncSession', mock_db_time):
         'password': 'secret',
         'created_at': time,
         'updated_at': time,
+        'todos': [],
     }
