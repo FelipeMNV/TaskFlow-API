@@ -21,11 +21,12 @@ from fast_zero.settings import Settings
 
 @pytest.fixture
 def client(session):
-    def get_session_override():
-        return session
+    async def get_session_override():
+        yield session
+
+    app.dependency_overrides[get_session] = get_session_override
 
     with TestClient(app) as client:
-        app.dependency_overrides[get_session] = get_session_override
         yield client
 
     app.dependency_overrides.clear()
