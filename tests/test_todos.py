@@ -4,6 +4,7 @@ from http import HTTPStatus
 import factory
 import factory.fuzzy
 import pytest
+from sqlalchemy.exc import DataError
 
 from fast_zero.models import Todo, TodoState
 
@@ -262,7 +263,8 @@ async def test_todo_invalid_state(session, user):
     todo = TodoFactory(user_id=user.id, state='invalid_state')
 
     session.add(todo)
-    await session.commit()
 
-    with pytest.raises(LookupError):
-        await session.refresh(todo)
+    with pytest.raises(DataError):
+        await session.commit()
+
+    await session.rollback()

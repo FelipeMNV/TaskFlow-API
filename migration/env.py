@@ -5,7 +5,7 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from fast_zero.models import table_registry
 from fast_zero.settings import Settings
-
+import selectors
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -71,7 +71,12 @@ async def run_async_migrations() -> None:
             
 
 def run_migrations_online() -> None:
-    asyncio.run(run_async_migrations())
+    asyncio.run(
+        run_async_migrations(),
+        loop_factory=lambda: asyncio.SelectorEventLoop(
+            selectors.SelectSelector()
+        ),
+    )
 
 if context.is_offline_mode():
     run_migrations_offline()
