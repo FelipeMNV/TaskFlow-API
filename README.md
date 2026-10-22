@@ -89,6 +89,4 @@ Esse comando também executa a verificação de lint antes dos testes. O reposit
 
 ## Sobre o projeto
 
-Este é um projeto de estudo, baseado nos conhecimentos adquiridos no curso de FastAPI do Dunossauro. Meu objetivo foi entender melhor o desenvolvimento de uma API do início ao fim, incluindo banco de dados, autenticação, testes e execução em containers.
-
-**Autor:** [Felipe Vieira](https://github.com/FelipeMNV)
+Este é um projeto de estudo, meu objetivo foi entender melhor o desenvolvimento de uma API do início ao fim, incluindo banco de dados, autenticação, testes e execução em containers.
